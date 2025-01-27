@@ -1,5 +1,6 @@
 const User = require("../models/user");
 
+// Middleware to authenticate API key
 const authenticateApiKey = async (req, res, next) => {
   const apiKey = req.header("X-API-Key");
   if (!apiKey) return res.status(401).json({ error: "Missing API key" });
@@ -15,4 +16,4 @@ const authenticateApiKey = async (req, res, next) => {
   }
 };
 
-module.exports = {authenticateApiKey};
+module.exports = { authenticateApiKey };

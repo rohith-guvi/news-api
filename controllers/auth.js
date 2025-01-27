@@ -3,6 +3,8 @@ const User = require("../models/user");
 const crypto = require("crypto");
 
 exports.generateApiKey = [
+  // Validate the request body
+  body("email").exists().withMessage("Email is required"),
   body("email").isEmail().withMessage("Invalid email format").normalizeEmail(),
 
   async (req, res) => {
@@ -14,8 +16,10 @@ exports.generateApiKey = [
     const { email } = req.body;
 
     try {
+      // Check if the user already exists
       let user = await User.findOne({ email });
 
+      // If the user doesn't exist, create a new user
       if (!user) {
         const newApiKey = crypto.randomBytes(24).toString("hex");
 
@@ -27,7 +31,7 @@ exports.generateApiKey = [
           apiKey: newApiKey,
         });
       }
-
+      // If the user already exists, generate a new API key
       const newApiKey = crypto.randomBytes(24).toString("hex");
       user.apiKey = newApiKey;
 

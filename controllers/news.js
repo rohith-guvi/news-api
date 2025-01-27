@@ -13,6 +13,7 @@ const getAllNews = async (req, res) => {
   if (title) filter.title = { $regex: title, $options: "i" };
 
   try {
+    // Fetch all news articles
     const paginatedNews = await paginate(News, filter, { page, limit });
     res.json(paginatedNews);
   } catch (error) {
@@ -27,6 +28,7 @@ const getNewsByCategory = async (req, res) => {
 
   try {
     validateCategory(category);
+    // Fetch news articles for the specified category
     const paginatedNews = await paginate(News, { category }, { page, limit });
     res.json(paginatedNews);
   } catch (error) {
@@ -36,30 +38,30 @@ const getNewsByCategory = async (req, res) => {
 
 // Controller: Get Latest News by Category
 const getLatestNewsByCategory = async (req, res) => {
-  const { category = "general" } = req.query; // Set category to "general" by default if not provided
+  const { category = "general" } = req.query;
 
   try {
-    // Validate the category
     validateCategory(category);
 
-    // Fetch the most recent news article for the specified category
+    // Find the latest news article for the specified category
     const latestNews = await News.find({ category })
-      .sort({ publishedAt: -1 }) // Sort by published date in descending order (most recent first)
-      .limit(1); // Limit to only 1 article (the most recent one)
+      .sort({ publishedAt: -1 })
+      .limit(1);
 
+    // If no news articles found, return a 404 response
     if (latestNews.length === 0) {
       return res.status(404).json({
-        message: `No news articles found for the '${category}' category`, // Return error if no news found
+        message: `No news articles found for the '${category}' category`,
       });
     }
 
-    // Send the most recent news article as the response
+    // Return the latest news article
     res.json({
       category,
-      latestNews: latestNews[0], // Only send the most recent article (not an array)
+      latestNews: latestNews[0],
     });
   } catch (error) {
-    handleError(res, error, "Error fetching the latest news"); // Handle any errors
+    handleError(res, error, "Error fetching the latest news");
   }
 };
 
@@ -67,12 +69,15 @@ const getLatestNewsByCategory = async (req, res) => {
 const searchNews = async (req, res) => {
   const { title, page, limit } = req.query;
 
+  // Check if title query is provided
   if (!title || title.trim() === "") {
     return res.status(400).json({ message: "Title query is required" });
   }
 
   try {
+    // Define the search filter
     const filter = { title: { $regex: title.trim(), $options: "i" } };
+    // Fetch news articles based on the search query
     const paginatedNews = await paginate(News, filter, { page, limit });
     res.json(paginatedNews);
   } catch (error) {
@@ -85,7 +90,9 @@ const getNewsById = async (req, res) => {
   const { id } = req.params;
 
   try {
+    // Fetch news article by ID
     const news = await News.findById(id);
+    // If no news article found, return a 404 response
     if (!news) {
       return res.status(404).json({ message: "News article not found" });
     }
@@ -104,6 +111,7 @@ const createNews = [
 
     try {
       validateCategory(category);
+      // Create a new news article
       const news = new News({
         title,
         description,
@@ -123,6 +131,7 @@ const createNews = [
 
 // Controller: Update News
 const updateNews = [
+  // Validate the request body
   validateNews,
   checkValidation,
   async (req, res) => {
@@ -131,11 +140,13 @@ const updateNews = [
 
     try {
       validateCategory(category);
+      // Update the news article
       const updatedNews = await News.findByIdAndUpdate(
         id,
         { title, description, category, publishedAt, url },
         { new: true }
       );
+      // If no news article found, return a 404 response
       if (!updatedNews) {
         return res.status(404).json({ message: "News article not found" });
       }
@@ -147,35 +158,26 @@ const updateNews = [
 ];
 
 // Controller: Update Latest News for Each Category
-const updateLatestNews = async (req, res) => {
+const updateLatestNews = async () => {
+  const categories = ["general", "business", "entertainment", "sports"];
   try {
-    const categories = [
-      "general",
-      "business",
-      "entertainment",
-      "health",
-      "science",
-      "sports",
-      "technology",
-    ];
-
     for (const category of categories) {
-      const latestCategoryNews = await News.find({ category })
-        .sort({ publishedAt: -1 })
+      // Find the oldest news article for the current category
+      const oldestCategoryNews = await News.find({ category })
+        .sort({ publishedAt: 1 })
         .limit(1);
 
-      if (latestCategoryNews.length > 0) {
+      if (oldestCategoryNews.length > 0) {
+        // Update the `publishedAt` field to the current date and time
         await News.updateOne(
-          { category },
-          { $set: latestCategoryNews[0] },
-          { upsert: true }
+          { _id: oldestCategoryNews[0]._id },
+          { $set: { publishedAt: new Date() } }
         );
       }
     }
-
-    res.json({ message: "Latest news updated successfully" });
+    console.log("Oldest news updated to the latest for all categories.");
   } catch (error) {
-    handleError(res, error, "Error updating latest news");
+    console.error("Error updating oldest news to the latest:", error);
   }
 };
 
