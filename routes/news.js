@@ -13,8 +13,7 @@ const { authenticateApiKey } = require("../middleware/auth");
 
 const router = express.Router();
 
-// Apply the API key authentication middleware to all routes
-//router.use(authenticateApiKey);
+router.use(authenticateApiKey);
 
 // Route: Get all news with pagination
 router.get("/", getAllNews);
