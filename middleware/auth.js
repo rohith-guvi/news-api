@@ -15,4 +15,4 @@ const authenticateApiKey = async (req, res, next) => {
   }
 };
 
-module.exports = authenticateApiKey;
+module.exports = {authenticateApiKey};
